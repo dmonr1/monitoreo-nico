@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitoreo TI — Despacho Presidencial</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Source+Sans+3:wght@400;500;600&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --cream:#faf7f2; --ivory:#f4f0e8; --parchment:#e8e0d0; --sand:#cfc7b5;
+  --navy:#1e2d40; --slate:#3d5166; --stone:#7a8898; --white:#ffffff;
+  --ok:#2e7d5e;   --ok-bg:#edf7f2;  --ok-bd:#a8d5bf;
+  --fail:#b5311a; --fail-bg:#fdf0ed;--fail-bd:#f2b8ae;
+  --warn:#9a5c00; --warn-bg:#fef9ec;--warn-bd:#f7d98a;
+  --info:#1a5896; --info-bg:#edf4fc;--info-bd:#9dc4e8;
+  --acc:#7c3220;  --acc-lt:#f9ede9; --acc-bd:#dba090;
+  --rr:6px; --rm:10px; --rl:14px;
+  --sh:0 1px 3px rgba(30,45,64,.07),0 1px 2px rgba(30,45,64,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--cream);color:var(--navy);font-family:'Source Sans 3',sans-serif;font-size:15px;line-height:1.65;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--ivory)}
+::-webkit-scrollbar-thumb{background:var(--sand);border-radius:3px}
+
+.hdr{background:var(--navy);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.hdr-l{display:flex;align-items:center;gap:14px}
+.emb{width:36px;height:36px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.2);border-radius:var(--rr);display:flex;align-items:center;justify-content:center;font-size:18px}
+.h-title{font-family:'Lora',serif;font-size:16px;font-weight:600;color:#fff;letter-spacing:.01em}
+.h-sub{font-size:11px;color:rgba(255,255,255,.42);text-transform:uppercase;letter-spacing:.09em;margin-top:1px}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.live{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.55)}
+.ldot{width:8px;height:8px;border-radius:50%;background:#4ade80;animation:glow 2.2s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}50%{box-shadow:0 0 0 5px rgba(74,222,128,0)}}
+.wpill{font-family:'Source Code Pro',monospace;font-size:11px;color:rgba(255,255,255,.45);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);padding:4px 12px;border-radius:4px}
+.btn-ingresar{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#fff;background:var(--acc);border:none;padding:8px 16px;border-radius:var(--rr);cursor:pointer;text-decoration:none;transition:opacity .15s}
+.btn-ingresar:hover{opacity:.85}
+
+.nav{background:var(--white);border-bottom:2px solid var(--parchment);padding:0 2rem;display:flex;overflow-x:auto;position:sticky;top:64px;z-index:100}
+.nav::-webkit-scrollbar{height:0}
+.tb{background:none;border:none;cursor:pointer;font-family:'Source Sans 3',sans-serif;font-size:13px;font-weight:500;color:var(--stone);padding:14px 18px;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;display:flex;align-items:center;gap:7px;transition:color .18s,border-color .18s}
+.tb:hover{color:var(--slate)}
+.tb.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:600}
+
+/* Filtro de fechas */
+.filter-bar{background:var(--white);border-bottom:1px solid var(--parchment);padding:10px 2rem;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.filter-bar label{font-size:11px;font-weight:700;color:var(--stone);text-transform:uppercase;letter-spacing:.07em}
+.filter-bar input[type="date"]{font-family:'Source Code Pro',monospace;font-size:13px;color:var(--navy);border:1px solid var(--parchment);background:var(--ivory);padding:6px 10px;border-radius:var(--rr);outline:none}
+.filter-bar input:focus{border-color:var(--slate)}
+.btn-filtrar{background:var(--navy);color:#fff;border:none;padding:7px 18px;border-radius:var(--rr);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn-filtrar:hover{opacity:.8}
+.btn-semana{background:var(--ivory);color:var(--slate);border:1px solid var(--parchment);padding:7px 14px;border-radius:var(--rr);font-size:12px;cursor:pointer;font-family:inherit;transition:background .15s}
+.btn-semana:hover{background:var(--parchment)}
+
+.main{padding:1.75rem 2rem 3rem;max-width:1520px;margin:0 auto}
+.panel{display:none;animation:fu .22s ease}
+.panel.on{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Loading state */
+.loading{text-align:center;padding:3rem;color:var(--stone)}
+.spin{display:inline-block;width:32px;height:32px;border:3px solid var(--parchment);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Alert */
+.alert{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:var(--rm);border:1px solid;font-size:13px;margin-bottom:14px;line-height:1.55}
+.awarn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
+.aok{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--ok)}
+.afail{background:var(--fail-bg);border-color:var(--fail-bd);color:var(--fail)}
+.ainfo{background:var(--info-bg);border-color:var(--info-bd);color:var(--info)}
+.ai{font-size:15px;flex-shrink:0;margin-top:1px}
+
+/* Metric cards */
+.mrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px;margin-bottom:16px}
+.mc{background:var(--white);border:1px solid var(--parchment);border-radius:var(--rm);padding:1.1rem 1.25rem;box-shadow:var(--sh);position:relative;overflow:hidden}
+.mc::after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:var(--rm) 0 0 var(--rm)}
+.mc.ok::after{background:var(--ok)}.mc.fail::after{background:var(--fail)}
+.mc.warn::after{background:var(--warn)}.mc.info::after{background:var(--info)}
+.ml{font-size:11px;color:var(--stone);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.mv{font-size:30px;font-weight:700;line-height:1;letter-spacing:-.02em;font-family:'Lora',serif}
+.mv.ok{color:var(--ok)}.mv.fail{color:var(--fail)}.mv.warn{color:var(--warn)}.mv.info{color:var(--info)}
+.dn{font-size:16px;font-weight:400;color:var(--stone);font-family:'Source Sans 3',sans-serif}
+.ms{font-size:11px;color:var(--stone);margin-top:5px}
+.mico{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:28px;opacity:.06;pointer-events:none}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:860px){.g2{grid-template-columns:1fr}}
+
+.card{background:var(--white);border:1px solid var(--parchment);border-radius:var(--rl);box-shadow:var(--sh);overflow:hidden}
+.ch{padding:11px 16px;border-bottom:1px solid var(--parchment);display:flex;align-items:center;justify-content:space-between;background:var(--ivory)}
+.ct{font-size:11px;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.09em}
+.cb{padding:14px 16px}
+.cbf{padding:0}
+
+.pill{display:inline-flex;align-items:center;justify-content:center;width:34px;height:21px;border-radius:var(--rr);font-size:9px;font-weight:700;border:1px solid}
+.pok{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--ok)}
+.pfail{background:var(--fail-bg);border-color:var(--fail-bd);color:var(--fail)}
+.pna{background:var(--ivory);border-color:var(--parchment);color:var(--stone)}
+.pwarn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn);font-size:8px;padding:0 5px;width:auto}
+
+.mt{width:100%;border-collapse:collapse;font-size:12.5px}
+.mt thead tr{background:var(--ivory)}
+.mt thead th{font-size:10px;color:var(--stone);text-transform:uppercase;letter-spacing:.07em;padding:8px 10px;font-weight:700;white-space:nowrap}
+.mt thead th:first-child{text-align:left}
+.mt thead th:not(:first-child){text-align:center;width:70px}
+.mt tbody tr{border-bottom:1px solid var(--parchment);transition:background .12s}
+.mt tbody tr:last-child{border-bottom:none}
+.mt tbody tr:hover{background:var(--ivory)}
+.mt td{padding:7px 10px}
+.mt td:first-child{color:var(--slate);font-family:'Source Code Pro',monospace;font-size:11px}
+.mt td:not(:first-child){text-align:center}
+.st{max-height:380px;overflow-y:auto}
+
+.pi{margin-bottom:13px}.pi:last-child{margin-bottom:0}
+.ph{display:flex;justify-content:space-between;font-size:12px;color:var(--slate);margin-bottom:5px}
+.ph span:last-child{font-weight:700}
+.pb{height:7px;background:var(--parchment);border-radius:4px;overflow:hidden}
+.pf{height:100%;border-radius:4px;transition:width .6s ease}
+
+.vi{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid var(--parchment);font-size:13px}
+.vi:last-child{border-bottom:none}
+.vd{color:var(--slate);font-family:'Source Code Pro',monospace;font-size:12px}
+.vt{color:var(--stone);font-family:'Source Code Pro',monospace;font-size:12px}
+.badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:var(--rr);border:1px solid}
+.bok{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--ok)}
+.bfail{background:var(--fail-bg);border-color:var(--fail-bd);color:var(--fail)}
+.bwarn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
+
+.rb{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid;text-transform:uppercase}
+.cw{position:relative;width:100%}
+
+/* Sin datos */
+.no-data{text-align:center;padding:2.5rem;color:var(--stone);font-size:13px}
+.no-data-ico{font-size:32px;margin-bottom:8px}
+
+footer{text-align:center;padding:2rem 1rem;font-size:11px;color:var(--stone);text-transform:uppercase;letter-spacing:.1em;border-top:1px solid var(--parchment);margin-top:2rem}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-l">
+    <div class="emb">🛡</div>
+    <div>
+      <div class="h-title">Despacho Presidencial del Perú</div>
+      <div class="h-sub">Centro de Monitoreo de Infraestructura TI</div>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <div class="live"><div class="ldot"></div><span id="lbl-periodo">Cargando…</span></div>
+    <div class="wpill" id="wpill-fecha">—</div>
+    <a href="ingresar.html" class="btn-ingresar">📋 Ingresar datos del día</a>
+  </div>
+</header>
+
+<nav class="nav">
+  <button class="tb on"  onclick="show('resumen',this)">Resumen ejecutivo</button>
+  <button class="tb" onclick="show('switches',this)">⇄ Switches</button>
+  <button class="tb" onclick="show('servidores',this)">🖥 Servidores</button>
+  <button class="tb" onclick="show('servicios',this)">🌐 Servicios</button>
+  <button class="tb" onclick="show('infra',this)">⚙ Backups & UPS</button>
+  <button class="tb" onclick="show('ambiente',this)">🌡 Ambiente & VPN</button>
+</nav>
+
+<!-- Barra de filtro de fechas -->
+<div class="filter-bar">
+  <label>Período</label>
+  <input type="date" id="f-inicio">
+  <span style="color:var(--stone);font-size:12px">hasta</span>
+  <input type="date" id="f-fin">
+  <button class="btn-filtrar" onclick="cargarTodo()">Aplicar</button>
+  <button class="btn-semana" onclick="semanaActual()">Esta semana</button>
+  <button class="btn-semana" onclick="hoy()">Hoy</button>
+  <span id="lbl-cargando" style="font-size:12px;color:var(--stone);display:none">⟳ Actualizando…</span>
+</div>
+
+<main class="main">
+
+<!-- ═══ RESUMEN ═══ -->
+<div id="p-resumen" class="panel on">
+  <div id="res-alerts"></div>
+  <div class="mrow" id="res-metrics"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Cumplimiento por categoría</span></div>
+      <div class="cb" id="res-bars"></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Temperatura Centro de Datos ºC</span></div>
+      <div class="cb"><div class="cw" style="height:260px"><canvas id="cT1"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SWITCHES ═══ -->
+<div id="p-switches" class="panel">
+  <div class="card">
+    <div class="ch"><span class="ct">Estado de switches por día</span></div>
+    <div class="cbf"><div class="st"><table class="mt" id="tbl-switches">
+      <thead><tr id="sw-head"></tr></thead>
+      <tbody id="sw-body"></tbody>
+    </table></div></div>
+  </div>
+</div>
+
+<!-- ═══ SERVIDORES ═══ -->
+<div id="p-servidores" class="panel">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Servidores Windows</span></div>
+      <div class="cbf"><div class="st"><table class="mt" id="tbl-win">
+        <thead><tr id="win-head"></tr></thead>
+        <tbody id="win-body"></tbody>
+      </table></div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Servidores Linux</span></div>
+      <div class="cbf"><div class="st"><table class="mt" id="tbl-lin">
+        <thead><tr id="lin-head"></tr></thead>
+        <tbody id="lin-body"></tbody>
+      </table></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SERVICIOS ═══ -->
+<div id="p-servicios" class="panel">
+  <div class="card">
+    <div class="ch"><span class="ct">Servicios web — disponibilidad diaria</span></div>
+    <div class="cbf"><div class="st"><table class="mt" id="tbl-svc">
+      <thead><tr id="svc-head"></tr></thead>
+      <tbody id="svc-body"></tbody>
+    </table></div></div>
+  </div>
+</div>
+
+<!-- ═══ BACKUPS & UPS ═══ -->
+<div id="p-infra" class="panel">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Backups — Arcserve & Oracle</span></div>
+      <div class="cbf"><table class="mt" id="tbl-bk">
+        <thead><tr><th>Fecha</th><th>Arcserve</th><th>Oracle</th><th>Observaciones</th></tr></thead>
+        <tbody id="bk-body"></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">UPS — estado por grupo</span></div>
+      <div class="cbf"><div class="st"><table class="mt" id="tbl-ups">
+        <thead><tr id="ups-head"></tr></thead>
+        <tbody id="ups-body"></tbody>
+      </table></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AMBIENTE & VPN ═══ -->
+<div id="p-ambiente" class="panel">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Temperatura & Humedad — Centro de Datos</span></div>
+      <div class="cbf"><table class="mt">
+        <thead><tr><th>Fecha</th><th>Temperatura</th><th>Humedad</th></tr></thead>
+        <tbody id="amb-body"></tbody>
+      </table></div>
+      <div class="ch" style="border-top:1px solid var(--parchment)"><span class="ct">Tendencia temperatura ºC</span></div>
+      <div class="cb"><div class="cw" style="height:160px"><canvas id="cT2"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">VPN — historial de conexiones</span></div>
+      <div id="vpn-list"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+<footer>Despacho Presidencial del Perú — DTIS — Sistema de Monitoreo TI</footer>
+
+<script>
+// ── API ────────────────────────────────────────────────────────────────────────
+const API = `http://${location.hostname}:8000/api`;
+
+async function get(path) {
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(`${path} → ${r.status}`);
+  return r.json();
+}
+
+// ── FECHAS ────────────────────────────────────────────────────────────────────
+const fi = document.getElementById('f-inicio');
+const ff = document.getElementById('f-fin');
+
+function fmt(d) { return d.toISOString().split('T')[0]; }
+
+function semanaActual() {
+  const hoy = new Date();
+  const lun = new Date(hoy); lun.setDate(hoy.getDate() - hoy.getDay() + 1);
+  const vie = new Date(lun); vie.setDate(lun.getDate() + 4);
+  fi.value = fmt(lun); ff.value = fmt(vie);
+  cargarTodo();
+}
+
+function hoy() {
+  const h = fmt(new Date());
+  fi.value = h; ff.value = h;
+  cargarTodo();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function p(estado) {
+  if (estado === 'ok')    return '<span class="pill pok">OK</span>';
+  if (estado === 'fail')  return '<span class="pill pfail">✗</span>';
+  if (estado === 'alert') return '<span class="pill pwarn">ALT</span>';
+  return '<span class="pill pna">—</span>';
+}
+
+function noData(msg = 'Sin datos para el período seleccionado') {
+  return `<div class="no-data"><div class="no-data-ico">📭</div>${msg}</div>`;
+}
+
+// Construye tabla pivotada: filas = nombre, columnas = fechas
+function buildPivotTable(data, nameField, statusField, headId, bodyId, extraCol) {
+  const fechas = [...new Set(data.map(d => d[nameField === 'nombre' ? 'fecha' : 'fecha']))].sort();
+  const nombres = [...new Set(data.map(d => d[nameField]))].sort();
+
+  const head = document.getElementById(headId);
+  const body = document.getElementById(bodyId);
+
+  if (!data.length) { body.innerHTML = `<tr><td colspan="10">${noData()}</td></tr>`; return; }
+
+  // Cabecera
+  head.innerHTML = `<th>${nameField === 'nombre' ? 'Nombre' : 'Grupo'}</th>` +
+    (extraCol ? `<th>${extraCol}</th>` : '') +
+    fechas.map(f => `<th>${f.slice(5)}</th>`).join('');
+
+  // Mapa para acceso rápido
+  const map = {};
+  data.forEach(d => {
+    if (!map[d[nameField]]) map[d[nameField]] = {};
+    map[d[nameField]][d.fecha] = d[statusField];
+  });
+
+  body.innerHTML = nombres.map(n => {
+    const rolMap = {};
+    data.filter(d => d[nameField] === n).forEach(d => { if (d.rol) rolMap[n] = d.rol; if (d.tipo) rolMap[n] = d.tipo; });
+    const extra = extraCol ? `<td style="text-align:left"><span class="rb" style="color:#3d5166;background:#f1f4f7;border-color:#c5d0dc">${rolMap[n]||''}</span></td>` : '';
+    const cells = fechas.map(f => `<td>${p(map[n]?.[f])}</td>`).join('');
+    return `<tr><td title="${n}">${n}</td>${extra}${cells}</tr>`;
+  }).join('');
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+let chartT1, chartT2;
+
+function renderCharts(ambData) {
+  const labels = ambData.map(d => d.fecha.slice(5));
+  const temps  = ambData.map(d => d.temperatura);
+  const hums   = ambData.map(d => d.humedad);
+
+  const cfg = {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'Temperatura (ºC)', data:temps, borderColor:'#1a5896', backgroundColor:'rgba(26,88,150,0.07)',
+        pointBackgroundColor:'#1a5896', pointRadius:5, borderWidth:2.5, tension:0.4, fill:true, yAxisID:'y' },
+      { label:'Humedad (%)', data:hums, borderColor:'#7c3220', backgroundColor:'rgba(124,50,32,0.04)',
+        pointBackgroundColor:'#7c3220', pointRadius:4, borderWidth:2, tension:0.4, fill:false, yAxisID:'y2' },
+    ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:true,labels:{font:{size:11},color:'#3d5166',boxWidth:12,padding:14}} },
+      scales:{
+        x:{ grid:{color:'rgba(30,45,64,0.06)'}, ticks:{color:'#7a8898',font:{size:10},maxRotation:40} },
+        y:{ grid:{color:'rgba(30,45,64,0.06)'}, ticks:{color:'#1a5896',font:{size:10}}, min:18, max:25, position:'left' },
+        y2:{ grid:{display:false}, ticks:{color:'#7c3220',font:{size:10}}, min:55, max:65, position:'right' },
+      }
+    }
+  };
+
+  if (chartT1) chartT1.destroy();
+  if (chartT2) chartT2.destroy();
+  chartT1 = new Chart(document.getElementById('cT1'), JSON.parse(JSON.stringify(cfg)));
+  chartT2 = new Chart(document.getElementById('cT2'), JSON.parse(JSON.stringify(cfg)));
+}
+
+// ── RENDER RESUMEN ────────────────────────────────────────────────────────────
+function renderResumen(res) {
+  // Período label
+  document.getElementById('lbl-periodo').textContent = `${res.periodo.inicio} → ${res.periodo.fin}`;
+  document.getElementById('wpill-fecha').textContent = `${res.periodo.inicio.slice(5)} / ${res.periodo.fin.slice(5)}`;
+
+  // Alertas
+  const alerts = document.getElementById('res-alerts');
+  alerts.innerHTML = '';
+  if (res.ups_alertas.length > 0) {
+    const grupos = [...new Set(res.ups_alertas.map(u => u.grupo))].join(', ');
+    alerts.innerHTML += `<div class="alert awarn"><span class="ai">⚠</span><div><strong>UPS en estado ALERT:</strong> ${grupos}. Revisar mantenimiento correctivo.</div></div>`;
+  }
+  const allOk = res.switches.pct===100 && res.servidores.pct===100 && res.servicios.pct===100;
+  if (allOk) {
+    alerts.innerHTML += `<div class="alert aok"><span class="ai">✓</span><div>Switches, servidores y servicios web al <strong>100%</strong> de disponibilidad en el período.</div></div>`;
+  }
+  if (res.backups.arcserve.pct < 100 || res.backups.oracle.pct < 100) {
+    alerts.innerHTML += `<div class="alert awarn"><span class="ai">⚠</span><div>Backups con fallos — Arcserve: ${res.backups.arcserve.ok}/${res.backups.arcserve.total} · Oracle: ${res.backups.oracle.ok}/${res.backups.oracle.total}</div></div>`;
+  }
+  if (!alerts.innerHTML) {
+    alerts.innerHTML = `<div class="alert ainfo"><span class="ai">ℹ</span><div>Sin datos registrados para el período seleccionado. <a href="ingresar.html" style="color:inherit;font-weight:700">Ingresar datos del día →</a></div></div>`;
+  }
+
+  // Métricas
+  const m = document.getElementById('res-metrics');
+  const mkCard = (cls, label, val, tot, sub, ico) =>
+    `<div class="mc ${cls}"><div class="ml">${label}</div><div class="mv ${cls}">${val}<span class="dn">/${tot}</span></div><div class="ms">${sub}</div><div class="mico">${ico}</div></div>`;
+
+  m.innerHTML =
+    mkCard(res.switches.pct===100?'ok':'fail',  'Switches',    res.switches.ok,   res.switches.total,   `${res.switches.pct}% disponibilidad`,   '⇄') +
+    mkCard(res.servidores.pct===100?'ok':'fail','Servidores',  res.servidores.ok, res.servidores.total, `${res.servidores.pct}% disponibilidad`,  '🖥') +
+    mkCard(res.servicios.pct===100?'ok':'fail', 'Servicios',   res.servicios.ok,  res.servicios.total,  `${res.servicios.pct}% disponibilidad`,   '🌐') +
+    mkCard(res.ups_alertas.length===0?'ok':'warn','UPS',       res.ups_alertas.length===0?'OK':'⚠','',
+           res.ups_alertas.length===0?'Sin alertas':`${res.ups_alertas.length} grupo(s) en ALERT`,      '⚡') +
+    mkCard(res.backups.arcserve.pct===100?'ok':'warn','Arcserve', res.backups.arcserve.ok, res.backups.arcserve.total, `${res.backups.arcserve.pct}%`, '💾') +
+    mkCard(res.backups.oracle.pct===100?'ok':'warn','Oracle DBA', res.backups.oracle.ok, res.backups.oracle.total, `${res.backups.oracle.pct}%`, '🗄') +
+    mkCard(res.vpn_dias_operativos>0?'ok':'warn','VPN', res.vpn_dias_operativos,'', 'días operativos', '🔒');
+
+  // Barras de progreso
+  const bars = document.getElementById('res-bars');
+  const bar = (label, pct, color) => `
+    <div class="pi">
+      <div class="ph"><span>${label}</span><span style="color:${color}">${pct}%</span></div>
+      <div class="pb"><div class="pf" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  bars.innerHTML =
+    bar('Switches',              res.switches.pct,           res.switches.pct===100?'var(--ok)':'var(--fail)') +
+    bar('Servidores',            res.servidores.pct,         res.servidores.pct===100?'var(--ok)':'var(--fail)') +
+    bar('Servicios web',         res.servicios.pct,          res.servicios.pct===100?'var(--ok)':'var(--fail)') +
+    bar('Backup Arcserve',       res.backups.arcserve.pct,   res.backups.arcserve.pct===100?'var(--ok)':'var(--warn)') +
+    bar('Backup Oracle DBA',     res.backups.oracle.pct,     res.backups.oracle.pct===100?'var(--ok)':'var(--warn)');
+}
+
+// ── RENDER SWITCHES ───────────────────────────────────────────────────────────
+function renderSwitches(data) {
+  if (!data.length) { document.getElementById('sw-body').innerHTML = `<tr><td colspan="10">${noData()}</td></tr>`; return; }
+  buildPivotTable(data, 'nombre', 'estado', 'sw-head', 'sw-body', null);
+}
+
+// ── RENDER SERVIDORES ─────────────────────────────────────────────────────────
+function renderServidores(data) {
+  const win = data.filter(d => d.tipo === 'Windows');
+  const lin = data.filter(d => d.tipo === 'Linux');
+  if (!win.length && !lin.length) {
+    document.getElementById('win-body').innerHTML = `<tr><td colspan="10">${noData()}</td></tr>`;
+    document.getElementById('lin-body').innerHTML = `<tr><td colspan="10">${noData()}</td></tr>`;
+    return;
+  }
+  buildPivotTable(win, 'nombre', 'estado', 'win-head', 'win-body', 'Rol');
+  buildPivotTable(lin, 'nombre', 'estado', 'lin-head', 'lin-body', null);
+}
+
+// ── RENDER SERVICIOS ──────────────────────────────────────────────────────────
+function renderServicios(data) {
+  if (!data.length) { document.getElementById('svc-body').innerHTML = `<tr><td colspan="10">${noData()}</td></tr>`; return; }
+  buildPivotTable(data, 'nombre', 'estado', 'svc-head', 'svc-body', null);
+}
+
+// ── RENDER BACKUPS ────────────────────────────────────────────────────────────
+function renderBackups(data) {
+  const b = document.getElementById('bk-body');
+  if (!data.length) { b.innerHTML = `<tr><td colspan="4">${noData()}</td></tr>`; return; }
+  b.innerHTML = data.map(d => {
+    const arcPct = Math.round(d.arcserve_exitosos/d.arcserve_total*100);
+    const oraPct = Math.round(d.oracle_exitosos/d.oracle_total*100);
+    return `<tr>
+      <td style="font-family:'Source Code Pro',monospace;font-size:11px;color:var(--stone)">${d.fecha}</td>
+      <td style="text-align:center">
+        <span style="font-weight:700;color:${arcPct===100?'var(--ok)':'var(--warn)'}">${d.arcserve_exitosos}/${d.arcserve_total}</span>
+      </td>
+      <td style="text-align:center">
+        <span style="font-weight:700;color:${oraPct===100?'var(--ok)':'var(--warn)'}">${d.oracle_exitosos}/${d.oracle_total}</span>
+      </td>
+      <td style="font-size:11px;color:var(--stone)">${d.observaciones||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── RENDER UPS ────────────────────────────────────────────────────────────────
+function renderUPS(data) {
+  if (!data.length) {
+    document.getElementById('ups-body').innerHTML = `<tr><td colspan="10">${noData()}</td></tr>`;
+    return;
+  }
+  buildPivotTable(data, 'grupo', 'estado', 'ups-head', 'ups-body', null);
+}
+
+// ── RENDER AMBIENTE ───────────────────────────────────────────────────────────
+function renderAmbiente(data) {
+  const b = document.getElementById('amb-body');
+  if (!data.length) { b.innerHTML = `<tr><td colspan="3">${noData()}</td></tr>`; return; }
+  b.innerHTML = data.map(d => {
+    const tc = d.temperatura > 22 ? 'var(--warn)' : d.temperatura < 20 ? 'var(--info)' : 'var(--ok)';
+    return `<tr>
+      <td style="font-family:'Source Code Pro',monospace;font-size:11px;color:var(--stone)">${d.fecha}</td>
+      <td style="text-align:center;font-weight:600;color:${tc}">${d.temperatura.toFixed(2)} ºC</td>
+      <td style="text-align:center;color:var(--slate)">${d.humedad.toFixed(2)} %</td>
+    </tr>`;
+  }).join('');
+  renderCharts(data);
+}
+
+// ── RENDER VPN ────────────────────────────────────────────────────────────────
+function renderVPN(data) {
+  const el = document.getElementById('vpn-list');
+  if (!data.length) { el.innerHTML = noData(); return; }
+  el.innerHTML = data.map(d =>
+    `<div class="vi">
+      <span class="vd">${d.fecha}</span>
+      <span class="vt">${d.hora_conexion || '—'}</span>
+      <span class="badge ${d.estado==='operativo'?'bok':'bfail'}">${d.estado==='operativo'?'Operativo':'Falla'}</span>
+    </div>`
+  ).join('');
+}
+
+// ── CARGA PRINCIPAL ───────────────────────────────────────────────────────────
+async function cargarTodo() {
+  const inicio = fi.value;
+  const fin    = ff.value;
+  if (!inicio || !fin) return;
+
+  document.getElementById('lbl-cargando').style.display = 'inline';
+
+  try {
+    const [resumen, switches, servidores, servicios, backups, ups, ambiente, vpn] = await Promise.all([
+      get(`/resumen?fecha_inicio=${inicio}&fecha_fin=${fin}`),
+      get(`/switches?fecha_inicio=${inicio}&fecha_fin=${fin}`),
+      get(`/servidores?fecha_inicio=${inicio}&fecha_fin=${fin}`),
+      get(`/servicios?fecha_inicio=${inicio}&fecha_fin=${fin}`),
+      get(`/backups?fecha_inicio=${inicio}&fecha_fin=${fin}`),
+      get(`/ups?fecha_inicio=${inicio}&fecha_fin=${fin}`),
+      get(`/ambiente?dias=60`),
+      get(`/vpn?fecha_inicio=${inicio}&fecha_fin=${fin}`),
+    ]);
+
+    renderResumen(resumen);
+    renderSwitches(switches);
+    renderServidores(servidores);
+    renderServicios(servicios);
+    renderBackups(backups);
+    renderUPS(ups);
+    renderAmbiente(ambiente);
+    renderVPN(vpn);
+
+  } catch(e) {
+    console.error(e);
+    document.getElementById('res-alerts').innerHTML =
+      `<div class="alert afail"><span class="ai">✗</span><div>
+        <strong>No se pudo conectar al backend.</strong> Verifica que el servidor FastAPI esté corriendo en el puerto 8000.<br>
+        <code style="font-size:11px;margin-top:4px;display:block">uvicorn main:app --host 0.0.0.0 --port 8000</code>
+      </div></div>`;
+  }
+
+  document.getElementById('lbl-cargando').style.display = 'none';
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b => b.classList.remove('on'));
+  document.getElementById('p-' + id).classList.add('on');
+  btn.classList.add('on');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+semanaActual();
+</script>
+</body>
+</html>

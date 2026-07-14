@@ -1,0 +1,15 @@
+# Entornos y archivos de Python
+backend/venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Entorno local
+backend/.env
+
+# Logs y bases de datos locales
+*.log
+*.sqlite3
+*.db
+.DS_Store
