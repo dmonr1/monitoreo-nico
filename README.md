@@ -3,6 +3,11 @@
 
 ---
 
+# Subir cambios
+git add .
+git commit -m "xxxxxx"
+git push origin main
+
 ## Arquitectura
 
 ```
