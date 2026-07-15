@@ -192,6 +192,31 @@ Abrir en el navegador:
 - `http://localhost:8000` → Dashboard
 - `http://localhost:8000/ingresar.html` → Formulario de ingreso
 
+### 6.1 Trabajar sin base de datos
+
+Si no tienes conexión a PostgreSQL y necesitas diseñar o probar el frontend,
+puedes levantar un backend ficticio compatible con las mismas rutas `/api/*`:
+
+```bat
+cd backend
+uvicorn mock_main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Luego abre:
+- `http://localhost:8000` → Dashboard con datos simulados
+- `http://localhost:8000/docs` → Swagger del backend mock
+- `http://localhost:8000/api/health` → Verificación de modo mock
+
+Este modo no toca PostgreSQL. Los endpoints `POST` responden `ok` para simular
+guardado, y los endpoints `GET` generan respuestas ficticias para switches,
+servidores, servicios, backups, UPS, ambiente, VPN y resumen. TambiÃ©n incluye
+datos complementarios para la nueva vista:
+
+- `/api/radioenlaces`
+- `/api/biometricos`
+- `/api/hardware`
+- `/api/access-points`
+
 ---
 
 ## 7. Integración futura con Zabbix
@@ -235,18 +260,45 @@ monitoreo-ti/
 │   ├── requirements.txt ← Dependencias Python
 │   └── .env             ← Credenciales (NO subir a Git)
 ├── frontend/
-│   ├── index.html       ← Dashboard principal
-│   ├── ingresar.html    ← Formulario de ingreso diario
+│   ├── index.html       ← App principal con rutas hash
+│   ├── ingresar.html    ← Redirección a #/registro
+│   ├── css/
+│   │   ├── tokens.css
+│   │   ├── layout.css
+│   │   ├── components.css
+│   │   └── pages.css
 │   └── js/
-│       └── api.js       ← Cliente JavaScript
+│       ├── app.js
+│       ├── components/
+│       ├── data/
+│       ├── pages/
+│       └── services/
 └── README.md
 ```
+
+### 8.1 Rutas de la nueva interfaz
+
+La nueva vista usa JavaScript nativo por módulos y navegación hash:
+
+- `/#/dashboard` → Resumen ejecutivo
+- `/#/registro` → Registro diario
+- `/#/consultas` → Historial y consulta
+- `/#/reportes` → Reportes operativos
+
+Para trabajar solo la interfaz sin levantar FastAPI, puedes servir el frontend:
+
+```bat
+python -m http.server 8080 --bind 127.0.0.1 --directory frontend
+```
+
+Luego abre `http://127.0.0.1:8080`. Si no hay backend activo, las vistas
+principales muestran datos de respaldo para diseÃ±o visual.
 
 ---
 
 ## 9. Flujo diario del técnico
 
-1. Abrir `http://servidor/ingresar.html`
+1. Abrir `http://servidor/#/registro`
 2. Verificar que la fecha sea correcta
 3. Recorrer los 7 pasos (switches → servidores → servicios → backups → UPS → ambiente → VPN)
 4. Usar **"Marcar todos OK"** si todo está bien, o marcar individualmente los que fallen
