@@ -11,16 +11,28 @@ from sqlalchemy import func, desc
 from datetime import date, datetime, timedelta
 from typing import Optional, List
 
-from backend.config import CORS_ORIGINS
-from backend.models import (
-    Base, engine, get_db,
-    Switch, Servidor, Servicio,
-    Backup, UPS, Ambiente, VPN, AccessPoint
-)
-from backend.schemas import (
-    RegistroDiarioCreate, RegistroDiarioOut,
-    ResumenSemana, EstadoItem
-)
+try:
+    from backend.config import CORS_ORIGINS
+    from backend.models import (
+        Base, engine, get_db,
+        Switch, Servidor, Servicio,
+        Backup, UPS, Ambiente, VPN, AccessPoint
+    )
+    from backend.schemas import (
+        RegistroDiarioCreate, RegistroDiarioOut,
+        ResumenSemana, EstadoItem
+    )
+except ModuleNotFoundError:
+    from config import CORS_ORIGINS
+    from models import (
+        Base, engine, get_db,
+        Switch, Servidor, Servicio,
+        Backup, UPS, Ambiente, VPN, AccessPoint
+    )
+    from schemas import (
+        RegistroDiarioCreate, RegistroDiarioOut,
+        ResumenSemana, EstadoItem
+    )
 
 # ── Crear tablas si no existen ──────────────────────────────────────────────
 Base.metadata.create_all(bind=engine)
